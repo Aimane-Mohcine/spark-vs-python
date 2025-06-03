@@ -1,0 +1,373 @@
+<div class="max-w-7xl mx-auto p-8">
+  <!-- Header -->
+  <div class="text-center mb-12 pb-4 border-b-2 border-gray-200">
+    <h1 class="text-4xl font-light text-gray-600 mb-2">Gestion des Données</h1>
+    <p class="text-gray-500 text-lg">Comparaison et analyse des datasets</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <!-- Dataset A -->
+    <div class="bg-white border border-gray-300 rounded-lg p-6 shadow-md">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-600">Dataset A</h2>
+        <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+          {{ formatNumber(totalA) }} enregistrements
+        </span>
+      </div>
+
+      <div class="mb-6">
+        <div class="flex flex-col sm:flex-row gap-2 mb-4">
+          <button
+            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
+            [disabled]="loadingGererA"
+            (click)="toggleInputA()">
+            <span>Gérer les données</span>
+          </button>
+          <button
+            class="border border-gray-500 text-gray-500 hover:bg-gray-500 hover:text-white px-4 py-2 rounded text-sm font-medium transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed disabled:text-gray-400"
+            [disabled]="loadingViderA"
+            (click)="clearDataA()">
+            <span *ngIf="!loadingViderA">Vider</span>
+            <span *ngIf="loadingViderA" class="flex items-center">
+              <svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Vidage...
+            </span>
+          </button>
+        </div>
+
+        <div class="bg-gray-50 border border-gray-200 rounded-md p-4 mt-4" [class.hidden]="!showInputA">
+          <div class="flex flex-col sm:flex-row gap-4 items-center">
+            <label for="nombreLignesA" class="font-medium text-gray-600 min-w-max">Nombre de lignes:</label>
+            <input
+              type="number"
+              id="nombreLignesA"
+              [(ngModel)]="nombreLignesA"
+              min="1"
+              max="1000"
+              placeholder="Ex: 10"
+              class="flex-1 min-w-32 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <button
+              class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              [disabled]="loadingGenererA"
+              (click)="genererDataA()">
+              <span *ngIf="!loadingGenererA">Générer</span>
+              <span *ngIf="loadingGenererA" class="flex items-center">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Génération...
+              </span>
+            </button>
+            <button
+              class="border border-gray-500 text-gray-500 hover:bg-gray-500 hover:text-white px-4 py-2 rounded text-sm font-medium transition-colors"
+              (click)="toggleInputA()">
+              Annuler
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrapper border border-gray-300 rounded-md max-h-96 overflow-auto relative">
+        <!-- Loading overlay pour le tableau pendant la génération -->
+        <div *ngIf="loadingGenererA" class="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-20">
+          <div class="flex items-center">
+            <svg class="animate-spin -ml-1 mr-3 h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-blue-500 font-medium">Génération en cours...</span>
+          </div>
+        </div>
+
+        <table class="w-full bg-white border-collapse">
+          <thead class="sticky top-0 z-10">
+          <tr>
+            <th class="bg-gray-50 border-t border-b border-gray-300 px-3 py-3 text-left font-semibold text-gray-600 text-sm">ID</th>
+            <th class="bg-gray-50 border-t border-b border-gray-300 px-3 py-3 text-left font-semibold text-gray-600 text-sm">Nom</th>
+            <th class="bg-gray-50 border-t border-b border-gray-300 px-3 py-3 text-left font-semibold text-gray-600 text-sm">Valeur</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr *ngIf="dataA.length === 0">
+            <td colspan="3" class="text-center text-gray-500 italic py-8">Aucune donnée disponible</td>
+          </tr>
+          <tr *ngFor="let item of dataA" class="hover:bg-gray-50 odd:bg-gray-50/50">
+            <td class="px-3 py-3 border-b border-gray-200">{{ item.id }}</td>
+            <td class="px-3 py-3 border-b border-gray-200">{{ item.nom }}</td>
+            <td class="px-3 py-3 border-b border-gray-200">{{ item.valeur }}</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Dataset B -->
+    <div class="bg-white border border-gray-300 rounded-lg p-6 shadow-md">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-600">Dataset B</h2>
+        <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+          {{ formatNumber(totalB) }} enregistrements
+        </span>
+      </div>
+
+      <div class="mb-6">
+        <div class="flex flex-col sm:flex-row gap-2 mb-4">
+          <button
+            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
+            [disabled]="loadingGererB"
+            (click)="toggleInputB()">
+            <span>Gérer les données</span>
+          </button>
+          <button
+            class="border border-gray-500 text-gray-500 hover:bg-gray-500 hover:text-white px-4 py-2 rounded text-sm font-medium transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed disabled:text-gray-400"
+            [disabled]="loadingViderB"
+            (click)="clearDataB()">
+            <span *ngIf="!loadingViderB">Vider</span>
+            <span *ngIf="loadingViderB" class="flex items-center">
+              <svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Vidage...
+            </span>
+          </button>
+        </div>
+
+        <div class="bg-gray-50 border border-gray-200 rounded-md p-4 mt-4" [class.hidden]="!showInputB">
+          <div class="flex flex-col sm:flex-row gap-4 items-center">
+            <label for="nombreLignesB" class="font-medium text-gray-600 min-w-max">Nombre de lignes:</label>
+            <input
+              type="number"
+              id="nombreLignesB"
+              [(ngModel)]="nombreLignesB"
+              min="1"
+              max="1000"
+              placeholder="Ex: 10"
+              class="flex-1 min-w-32 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <button
+              class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              [disabled]="loadingGenererB"
+              (click)="genererDataB()">
+              <span *ngIf="!loadingGenererB">Générer</span>
+              <span *ngIf="loadingGenererB" class="flex items-center">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Génération...
+              </span>
+            </button>
+            <button
+              class="border border-gray-500 text-gray-500 hover:bg-gray-500 hover:text-white px-4 py-2 rounded text-sm font-medium transition-colors"
+              (click)="toggleInputB()">
+              Annuler
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrapper border border-gray-300 rounded-md max-h-96 overflow-auto relative">
+        <!-- Loading overlay pour le tableau pendant la génération -->
+        <div *ngIf="loadingGenererB" class="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-20">
+          <div class="flex items-center">
+            <svg class="animate-spin -ml-1 mr-3 h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-blue-500 font-medium">Génération en cours...</span>
+          </div>
+        </div>
+
+        <table class="w-full bg-white border-collapse">
+          <thead class="sticky top-0 z-10">
+          <tr>
+            <th class="bg-gray-50 border-t border-b border-gray-300 px-3 py-3 text-left font-semibold text-gray-600 text-sm">ID</th>
+            <th class="bg-gray-50 border-t border-b border-gray-300 px-3 py-3 text-left font-semibold text-gray-600 text-sm">Nom</th>
+            <th class="bg-gray-50 border-t border-b border-gray-300 px-3 py-3 text-left font-semibold text-gray-600 text-sm">Valeur</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr *ngIf="dataB.length === 0">
+            <td colspan="3" class="text-center text-gray-500 italic py-8">Aucune donnée disponible</td>
+          </tr>
+          <tr *ngFor="let item of dataB" class="hover:bg-gray-50 odd:bg-gray-50/50">
+            <td class="px-3 py-3 border-b border-gray-200">{{ item.id }}</td>
+            <td class="px-3 py-3 border-b border-gray-200">{{ item.nom }}</td>
+            <td class="px-3 py-3 border-b border-gray-200">{{ item.valeur }}</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section d'analyse -->
+  <div class="bg-white border border-gray-300 rounded-lg p-6 shadow-md">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-600">Analyse des Écarts</h2>
+      <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+      {{ formatNumber(totalEcarts) }} écarts
+      </span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 my-4 p-4 bg-gray-50 rounded-md" [class.hidden]="!showStats">
+      <div class="text-center">
+        <span class="block text-xs text-gray-500 uppercase tracking-wider mb-1">Identiques</span>
+        <span class="block text-2xl font-bold text-green-600">{{ formatNumber(stats.identiques) }}</span>
+      </div>
+      <div class="text-center">
+        <span class="block text-xs text-gray-500 uppercase tracking-wider mb-1">Différents</span>
+        <span class="block text-2xl font-bold text-red-600">{{ formatNumber(stats.differents) }}</span>
+      </div>
+      <div class="text-center">
+        <span class="block text-xs text-gray-500 uppercase tracking-wider mb-1">Nouveaux</span>
+        <span class="block text-2xl font-bold text-yellow-600">{{ formatNumber(stats.nouveaux) }}</span>
+      </div>
+      <div class="text-center" [class.hidden]="!showTemps">
+        <span class="block text-xs text-gray-500 uppercase tracking-wider mb-1">Temps</span>
+        <span class="block text-2xl font-bold text-blue-600">{{ tempsTraitement }}s</span>
+      </div>
+    </div>
+
+    <div class="mb-6">
+      <div class="flex flex-col sm:flex-row gap-2 mb-4">
+        <button
+          class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          [disabled]="traitementEnCours"
+          (click)="lancerTraitement()">
+          <span *ngIf="!traitementEnCours">Lancer l'analyse</span>
+          <span *ngIf="traitementEnCours" class="flex items-center">
+            <svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Analyse en cours...
+          </span>
+        </button>
+        <button
+          class="border border-gray-500 text-gray-500 hover:bg-gray-500 hover:text-white px-4 py-2 rounded text-sm font-medium transition-colors"
+          [class.hidden]="!showClearEcarts"
+          (click)="clearEcarts()">
+          Effacer l'analyse
+        </button>
+      </div>
+
+      <!-- Barre de progression -->
+      <div class="h-2 bg-gray-200 rounded-full overflow-hidden my-4" [class.hidden]="!showProgress">
+        <div class="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-500 ease-out" [style.width.%]="progressValue"></div>
+      </div>
+
+      <!-- Sélection de méthode -->
+      <div class="bg-gray-50 border border-gray-200 rounded-md p-4 mt-4" [class.hidden]="!showMethodSelection">
+        <h4 class="mb-4 text-gray-600 text-base font-medium">Sélectionnez la méthode d'analyse :</h4>
+        <div class="flex flex-col sm:flex-row gap-4">
+          <button
+            class="border-2 border-yellow-400 text-yellow-600 hover:bg-yellow-400 hover:text-gray-900 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center"
+            (click)="traiterAvec('Spark')">
+            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z"/>
+            </svg>
+            Apache Spark
+          </button>
+
+          <button
+            class="border-2 border-blue-400 text-blue-600 hover:bg-blue-400 hover:text-white px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center"
+            (click)="traiterAvec('Django')">
+            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+              <ellipse cx="12" cy="4" rx="8" ry="2" opacity="0.8"/>
+              <ellipse cx="12" cy="8" rx="8" ry="2" opacity="0.6"/>
+              <ellipse cx="12" cy="12" rx="8" ry="2" opacity="0.6"/>
+              <ellipse cx="12" cy="16" rx="8" ry="2" opacity="0.6"/>
+              <ellipse cx="12" cy="20" rx="8" ry="2" opacity="0.8"/>
+              <path d="M4 4v16c0 1.1 3.6 2 8 2s8-.9 8-2V4"/>
+            </svg>
+            Django ORM
+          </button>
+
+          <button
+            class="border-2 border-gray-400 text-gray-500 hover:bg-gray-400 hover:text-white px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200"
+            (click)="annulerChoixTraitement()">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tableau des résultats -->
+    <div class="table-wrapper border border-gray-300 rounded-md max-h-96 overflow-auto">
+      <table class="w-full bg-white border-collapse">
+        <thead class="sticky top-0 z-10">
+        <tr>
+          <th class="bg-gray-50 border-t border-b border-gray-300 px-3 py-3 text-left font-semibold text-gray-600 text-sm">
+            ID
+          </th>
+          <th class="bg-gray-50 border-t border-b border-gray-300 px-3 py-3 text-left font-semibold text-gray-600 text-sm">
+            Nom
+          </th>
+          <th class="bg-gray-50 border-t border-b border-gray-300 px-3 py-3 text-left font-semibold text-gray-600 text-sm">
+            Écart Valeur
+          </th>
+          <th class="bg-gray-50 border-t border-b border-gray-300 px-3 py-3 text-left font-semibold text-gray-600 text-sm">
+            Statut
+          </th>
+          <th class="bg-gray-50 border-t border-b border-gray-300 px-3 py-3 text-left font-semibold text-gray-600 text-sm">
+            Méthode
+          </th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngIf="dataEcarts.length === 0">
+          <td colspan="5" class="text-center text-gray-500 italic py-8">
+            <div class="flex flex-col items-center">
+              <svg class="w-12 h-12 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+              </svg>
+              Aucune analyse effectuée
+            </div>
+          </td>
+        </tr>
+        <tr *ngFor="let ecart of dataEcarts; index as i" class="hover:bg-gray-50 transition-colors" [ngClass]="{'bg-gray-50/30': i % 2 === 1}">
+          <td class="px-3 py-3 border-b border-gray-200 font-mono text-sm">{{ ecart.id }}</td>
+          <td class="px-3 py-3 border-b border-gray-200">{{ ecart.nom }}</td>
+          <td class="px-3 py-3 border-b border-gray-200 font-mono">{{ ecart.ecart_valeur }}</td>
+          <td class="px-3 py-3 border-b border-gray-200">
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              [ngClass]="{
+                'bg-green-100 text-green-800': ecart.status === 'Identique',
+                'bg-red-100 text-red-800': ecart.status === 'Différent',
+                'bg-yellow-100 text-yellow-800': ecart.status === 'Nouveau',
+                'bg-gray-100 text-gray-800': ecart.status !== 'Identique' && ecart.status !== 'Différent' && ecart.status !== 'Nouveau'
+              }">
+              <span class="w-1.5 h-1.5 mr-1.5 rounded-full"
+                    [ngClass]="{
+                  'bg-green-400': ecart.status === 'Identique',
+                  'bg-red-400': ecart.status === 'Différent',
+                  'bg-yellow-400': ecart.status === 'Nouveau',
+                  'bg-gray-400': ecart.status !== 'Identique' && ecart.status !== 'Différent' && ecart.status !== 'Nouveau'
+                }"></span>
+              {{ ecart.status }}
+            </span>
+          </td>
+          <td class="px-3 py-3 border-b border-gray-200">
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              [ngClass]="{
+                'bg-yellow-100 text-yellow-800': ecart.methode === 'Spark',
+                'bg-blue-100 text-blue-800': ecart.methode === 'Django'
+              }">
+              {{ ecart.methode }}
+            </span>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<router-outlet />
