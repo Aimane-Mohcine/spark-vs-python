@@ -159,7 +159,7 @@ def comparer_datasets(request):
         try:
             # Appel à la bonne méthode
             if methode == "Spark":
-                exec_time = comparer_avec_spark_auto(limit=None)   # ou limit=100_000 pour tester
+                comparer_avec_spark(limit=None)   
             else:
                 comparer_avec_django()
 
@@ -256,134 +256,11 @@ def comparer_avec_django():
 
 # Méthode Django
 
-import os
-from django.conf import settings           # ← pour récupérer la config DB Django
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, when, coalesce, abs as spark_abs
-from pyspark.sql.types import StringType
-import math, psutil      
-from pyspark.sql.functions import lit
-from pyspark.sql.functions import concat
-
-
-def comparer_avec_spark(limit: int | None = None, batch_size: int = 100_000) -> None:
-    """
-    Compare DatasetA et DatasetB avec PySpark puis insère les écarts dans la table Ecart.
-    - limit : nb de lignes max à lire (pour debug). None = lire l’ensemble.
-    - batch_size : nb d’objets Ecart à insérer par bulk_create.
-    """
-
-    # 1) Configuration base de données (issu du settings Django)
-    db_cfg = settings.DATABASES['default']
-    jdbc_url = f"jdbc:postgresql://{db_cfg['HOST']}:{db_cfg['PORT']}/{db_cfg['NAME']}"
-    jdbc_props = {
-        "user":     db_cfg['USER'],
-        "password": db_cfg['PASSWORD'],
-        "driver":   "org.postgresql.Driver",
-    }
-
-    # 2) Démarrage de la session Spark
-    spark = (
-        SparkSession.builder
-        .appName("Comparaison_DatasetA_DatasetB")
-        .config("spark.driver.memory", "4g")
-        .config("spark.driver.extraClassPath", os.path.join(
-            settings.BASE_DIR, "jdbc", "postgresql-42.7.3.jar")
-        )
-        .getOrCreate()
-    )
-
-    # 3) Lecture des deux tables avec partitionnement sur la colonne 'id'
-    def read_table(tname: str):
-        # On demande à Spark de découper la table en partitions de ~200 000 lignes
-        return (
-            spark.read.format("jdbc")
-            .option("url", jdbc_url)
-            .option("dbtable", tname if limit is None
-                    else f"(SELECT * FROM {tname} ORDER BY id LIMIT {limit}) AS sub")
-            .option("user", jdbc_props["user"])
-            .option("password", jdbc_props["password"])
-            .option("driver", jdbc_props["driver"])
-            .option("partitionColumn", "id")
-            .option("lowerBound", "1")
-            .option("upperBound", str(limit if limit else 1_000_000_000))
-            .option("numPartitions", "4")
-            .load()
-            .select("id", "valeur")
-        )
-
-    df_a = read_table("spark_dataseta")
-    df_b = read_table("spark_datasetb")
-
-    # 4) Jointure full-outer et détermination du statut
-    full_df = (
-        df_a.alias("a")
-        .join(df_b.alias("b"), col("a.id") == col("b.id"), how="fullouter")
-        .select(
-            coalesce(col("a.id"), col("b.id")).alias("id"),
-            col("a.valeur").alias("val_a"),
-            col("b.valeur").alias("val_b"),
-        )
-    )
-
-    result_df = (
-        full_df
-        .withColumn(
-            "status",
-            when(
-                (col("val_a").isNotNull()) & (col("val_b").isNotNull()) & (col("val_a") == col("val_b")),
-                "Identique"
-            ).when(
-                (col("val_a").isNotNull()) & (col("val_b").isNotNull()) & (col("val_a") != col("val_b")),
-                "Différent"
-            ).otherwise("Nouveau")
-        )
-        .withColumn(
-            "ecart_valeur",
-            when(col("status") == "Identique", "0")
-            .when(col("val_a").isNull(), col("val_b").cast(StringType()))
-            .when(col("val_b").isNull(), col("val_a").cast(StringType()))
-            .otherwise(spark_abs(col("val_a") - col("val_b")).cast(StringType()))
-        )
-        .select("id", "status", "ecart_valeur")
-        .orderBy("id")
-    )
-
-    # 5) Insertion dans Ecart par lots
-    batch = []
-    total = 0
-    for row in result_df.toLocalIterator():          # stream des partitions -> pas de collect() !
-        batch.append(Ecart(
-            nom=f"ItemAB_{row.id}",
-            ecart_valeur=row.ecart_valeur,
-            status=row.status,
-            methode="Spark",
-        ))
-        if len(batch) >= batch_size:
-            Ecart.objects.bulk_create(batch)
-            total += len(batch)
-            batch.clear()
-
-    if batch:                                        # reste du dernier lot
-        Ecart.objects.bulk_create(batch)
-        total += len(batch)
-
-    print(f"[Spark] {total} écarts insérés dans la table Ecart.")
-
-    spark.stop()     # Libère proprement la session Spark
-
-  
 
 
 
-def comparer_avec_spark_auto(limit: int | None = None) -> float:
-    """
-    Compare DatasetA et DatasetB via PySpark en s’adaptant :
-      • partitions JDBC = max(4, min(64, lignes // 250 000))
-      • mémoire driver = 60 % de la RAM dispo (borne 1 – 16 Go)
-    Écrit le résultat directement dans la table spark_ecart.
-    Renvoie le temps d’exécution en secondes.
-    """
+def comparer_avec_spark(limit: int | None = None) :
+
 
     # ── Imports internes ───────────────────────────────────────────────────────
     import os, math, psutil, time
@@ -394,7 +271,7 @@ def comparer_avec_spark_auto(limit: int | None = None) -> float:
     from pyspark.sql.types import StringType
     # ───────────────────────────────────────────────────────────────────────────
 
-    t0 = time.time()  # chrono global
+
 
     # Helper pour récupérer (min_id, max_id)
     def _id_bounds(table: str) -> tuple[int, int]:
@@ -514,7 +391,7 @@ def comparer_avec_spark_auto(limit: int | None = None) -> float:
     )
 
     spark.stop()
-    return round(time.time() - t0, 3)
+    
 
 
 
